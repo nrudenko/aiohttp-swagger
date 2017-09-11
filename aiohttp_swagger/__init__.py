@@ -4,8 +4,7 @@ from types import FunctionType
 
 from aiohttp import web
 
-from .helpers import (generate_doc_from_each_end_point,
-                      load_doc_from_yaml_file, swagger_path)
+from .helpers import (generate_swagger, load_doc_from_yaml_file, swagger_path)
 
 try:
     import ujson as json
@@ -32,7 +31,7 @@ def _swagger_def(request):
     return web.json_response(text=request.app["SWAGGER_DEF_CONTENT"])
 
 
-STATIC_PATH = abspath(join(dirname(__file__), "swagger_ui"))
+STATIC_PATH = abspath(join(dirname(__file__), "templates"))
 
 
 def setup_swagger(app: web.Application,
@@ -46,24 +45,27 @@ def setup_swagger(app: web.Application,
                   contact: str = "",
                   swagger_home_decor: FunctionType = None,
                   swagger_def_decor: FunctionType = None,
-                  swagger_info: dict = None):
+                  swagger_info: dict = None,
+                  swagger_ui_version='3.2.0'):
     _swagger_url = ("/{}".format(swagger_url)
                     if not swagger_url.startswith("/")
                     else swagger_url)
     _base_swagger_url = _swagger_url.rstrip('/')
     _swagger_def_url = '{}/swagger.json'.format(_base_swagger_url)
 
-    # Build Swagget Info
-    if swagger_info is None:
+    # Build Swagger Info
+    if not swagger_info:
         if swagger_from_file:
             swagger_info = load_doc_from_yaml_file(swagger_from_file)
         else:
-            swagger_info = generate_doc_from_each_end_point(
-                app, api_base_url=api_base_url, description=description,
-                api_version=api_version, title=title, contact=contact
+            swagger_info = generate_swagger(
+                app,
+                api_base_url=api_base_url,
+                description=description,
+                api_version=api_version,
+                title=title,
+                contact=contact
             )
-    else:
-        swagger_info = json.dumps(swagger_info)
 
     _swagger_home_func = _swagger_home
     _swagger_def_func = _swagger_def
@@ -87,12 +89,13 @@ def setup_swagger(app: web.Application,
     # --------------------------------------------------------------------------
     # Build templates
     # --------------------------------------------------------------------------
-    app["SWAGGER_DEF_CONTENT"] = swagger_info
+    app["SWAGGER_DEF_CONTENT"] = json.dumps(swagger_info)
     with open(join(STATIC_PATH, "index.html"), "r") as f:
         app["SWAGGER_TEMPLATE_CONTENT"] = (
             f.read()
-            .replace("##SWAGGER_CONFIG##", _swagger_def_url)
-            .replace("##STATIC_PATH##", statics_path)
+                .replace("##SWAGGER_CONFIG##", _swagger_def_url)
+                .replace("##STATIC_PATH##", statics_path)
+                .replace("##SWAGGER_UI_VERSION##", swagger_ui_version)
         )
 
 
