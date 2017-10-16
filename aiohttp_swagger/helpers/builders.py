@@ -29,25 +29,27 @@ def _extract_swagger_docs(end_point_doc, method="get"):
 
 def _build_doc_from_func_doc(route):
     out = {}
-    if issubclass(route.handler, web.View) and route.method == METH_ANY:
-        print(route.handler, route.handler)
+    handler = route.handler
+    if issubclass(handler, web.View) and route.method == METH_ANY:
+        print(handler, handler)
         method_names = {
-            attr for attr in dir(route.handler) if attr.upper() in METH_ALL
+            attr for attr in dir(handler) if attr.upper() in METH_ALL
         }
         for method_name in method_names:
-            method = getattr(route.handler, method_name)
+            method = getattr(handler, method_name)
             if method.__doc__ is not None and "---" in method.__doc__:
                 end_point_doc = method.__doc__.splitlines()
                 path = _extract_swagger_docs(end_point_doc, method=method_name)
                 out.update(path)
     elif isinstance(route, web.AbstractRoute):
         method_name = route.method.lower()
-        end_point_doc = route.handler.__doc__.splitlines()
-        path = _extract_swagger_docs(end_point_doc, method=method_name)
-        out.update(path)
+        if handler.__doc__ is not None and "---" in handler.__doc__:
+            end_point_doc = handler.__doc__.splitlines()
+            path = _extract_swagger_docs(end_point_doc, method=method_name)
+            out.update(path)
     else:
         try:
-            end_point_doc = route.handler.__doc__.splitlines()
+            end_point_doc = handler.__doc__.splitlines()
         except AttributeError:
             return {}
         path = _extract_swagger_docs(end_point_doc)
