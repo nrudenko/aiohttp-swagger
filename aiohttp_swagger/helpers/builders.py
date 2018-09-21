@@ -30,7 +30,7 @@ def _extract_swagger_docs(end_point_doc, method="get"):
 def _build_doc_from_func_doc(route):
     out = {}
     handler = route.handler
-    if issubclass(handler, web.View) and route.method == METH_ANY:
+    if isinstance(handler, web.View) and route.method == METH_ANY:
         print(handler, handler)
         method_names = {
             attr for attr in dir(handler) if attr.upper() in METH_ALL
